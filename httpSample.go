@@ -3,12 +3,12 @@ package main
 import (
 	"fmt"
 	"net/http"
-	"encoding/json"
 	"strings"
-	"io"
 	"os/user"
 	"log"
 	"io/ioutil"
+	"github.com/google/go-github/github"
+	"code.google.com/p/goauth2/oauth"
 )
 
 type Issue struct {
@@ -31,27 +31,21 @@ func main() {
 	check(err)
 	fmt.Print(string(dat))
 
-	// TODO: 起動引数ありでトークン更新/なしで保存しているトークンを使う
+	// TODO: 起動引数ありでトークン更新/なしで保存しているトークンを使うようにする
 	access_token := string(dat)
 	access_token = strings.Replace(access_token, "\n", "", -1)
 
-	url3 := "https://api.github.com/issues?state=open&filter=all&access_token=" + access_token
-	fmt.Println("--- " + url3 + " ---")
-	responseJson := httpRequestLog(url3)
-
-	dec := json.NewDecoder(strings.NewReader(responseJson))
-	for {
-		var res []Issue
-		if err := dec.Decode(&res); err == io.EOF {
-			break
-		} else if err != nil {
-			log.Fatal(err)
-		}
-
-		for _, i := range res {
-			fmt.Printf("issue %d: [%s] -> %s\n", i.Number, i.Title, i.Url)
-		}
+	t := &oauth.Transport {
+		Token: &oauth.Token{AccessToken: access_token},
 	}
+	client := github.NewClient(t.Client())
+
+	// list all repositories for the authenticated user
+	repos, _, err := client.Repositories.List("", nil)
+	for idx, repo := range repos {
+		fmt.Println(idx, *repo.Name)
+	}
+
 }
 
 func check(e error) {
