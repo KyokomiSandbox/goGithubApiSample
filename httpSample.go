@@ -3,11 +3,12 @@ package main
 import (
 	"fmt"
 	"net/http"
-	"io/ioutil"
 	"encoding/json"
 	"strings"
 	"io"
+	"os/user"
 	"log"
+	"io/ioutil"
 )
 
 type Issue struct {
@@ -21,8 +22,18 @@ type ResponseData struct {
 }
 
 func main() {
+	usr, err := user.Current()
+	if err != nil {
+		log.Fatal( err )
+	}
+
+	dat, err := ioutil.ReadFile(usr.HomeDir +"/.goGithubApiSample")
+	check(err)
+	fmt.Print(string(dat))
+
 	// TODO: 起動引数ありでトークン更新/なしで保存しているトークンを使う
-	access_token := ""
+	access_token := string(dat)
+	access_token = strings.Replace(access_token, "\n", "", -1)
 
 	url3 := "https://api.github.com/issues?state=open&filter=all&access_token=" + access_token
 	fmt.Println("--- " + url3 + " ---")
@@ -40,6 +51,12 @@ func main() {
 		for _, i := range res {
 			fmt.Printf("issue %d: [%s] -> %s\n", i.Number, i.Title, i.Url)
 		}
+	}
+}
+
+func check(e error) {
+	if e != nil {
+		panic(e)
 	}
 }
 
