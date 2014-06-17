@@ -2,10 +2,12 @@ package main
 
 import (
 	"fmt"
+	"flag"
 	"net/http"
 	"strings"
 	"os/user"
 	"log"
+	"os"
 	"io/ioutil"
 	"github.com/google/go-github/github"
 	"code.google.com/p/goauth2/oauth"
@@ -27,13 +29,50 @@ func main() {
 		log.Fatal( err )
 	}
 
-	dat, err := ioutil.ReadFile(usr.HomeDir +"/.goGithubApiSample")
-	check(err)
-	fmt.Print(string(dat))
+	var accessTokenFlag string
 
-	// TODO: 起動引数ありでトークン更新/なしで保存しているトークンを使うようにする
-	access_token := string(dat)
-	access_token = strings.Replace(access_token, "\n", "", -1)
+	/* register flag name and shorthand name */
+	accessTokenMessage := "Hear your github account Access Token."
+	flag.StringVar(&accessTokenFlag, "access-token", "", accessTokenMessage)
+	flag.StringVar(&accessTokenFlag, "a"           , "", accessTokenMessage)
+	flag.Parse()
+
+	var access_token string
+
+	if accessTokenFlag != "" {
+		log.Println("access-token param ok.")
+
+		access_token = accessTokenFlag
+
+		byteData := []byte(access_token)
+		writeFilePath := usr.HomeDir +"/.goGithubApiSample"
+		err := ioutil.WriteFile(writeFilePath, byteData, os.ModePerm)
+		if err != nil {
+			log.Fatal("access token write error.")
+			check(err)
+		} else {
+			log.Println(writeFilePath + " save access-token.")
+		}
+
+	} else {
+		log.Println("not access-token param read saveFile.")
+
+		dat, err := ioutil.ReadFile(usr.HomeDir +"/.goGithubApiSample")
+		if err != nil {
+			log.Fatal("not access token error.")
+			check(err)
+		}
+		fmt.Print(string(dat))
+
+		accessTokenSaveFile := string(dat)
+		accessTokenSaveFile = strings.Replace(accessTokenSaveFile, "\n", "", -1)
+		if accessTokenSaveFile != "" {
+			access_token = accessTokenSaveFile
+		} else {
+			panic("not access token error.")
+		}
+	}
+	fmt.Println("access_token =", access_token)
 
 	t := &oauth.Transport {
 		Token: &oauth.Token{AccessToken: access_token},
@@ -42,6 +81,7 @@ func main() {
 
 	// list all repositories for the authenticated user
 	repos, _, err := client.Repositories.List("", nil)
+	check(err)
 	for idx, repo := range repos {
 		fmt.Println(idx, *repo.Name)
 	}
